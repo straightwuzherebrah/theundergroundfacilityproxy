@@ -1,14 +1,35 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { ProxyInterface } from '@/components/ProxyInterface';
+import { useEffect } from 'react';
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    // Set initial tab cloaking
+    document.title = 'Google';
+    
+    // Create or update favicon
+    let favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      document.head.appendChild(favicon);
+    }
+    favicon.href = 'https://www.google.com/favicon.ico';
+
+    // Set up panic key listener (Space key)
+    const handlePanicKey = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && e.ctrlKey && e.shiftKey) {
+        window.location.href = 'https://classroom.google.com';
+      }
+    };
+
+    document.addEventListener('keydown', handlePanicKey);
+    
+    return () => {
+      document.removeEventListener('keydown', handlePanicKey);
+    };
+  }, []);
+
+  return <ProxyInterface />;
 };
 
 export default Index;
