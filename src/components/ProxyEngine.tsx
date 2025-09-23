@@ -1,0 +1,296 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { 
+  RefreshCw, 
+  ArrowLeft, 
+  ArrowRight, 
+  Home, 
+  Lock, 
+  Globe,
+  AlertTriangle,
+  ExternalLink,
+  Maximize2
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface ProxyEngineProps {
+  url: string;
+  title: string;
+  onNavigate: (url: string) => void;
+  onTitleChange: (title: string) => void;
+}
+
+export const ProxyEngine: React.FC<ProxyEngineProps> = ({ 
+  url, 
+  title, 
+  onNavigate, 
+  onTitleChange 
+}) => {
+  const { toast } = useToast();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [currentUrl, setCurrentUrl] = useState(url);
+  const [isLoading, setIsLoading] = useState(false);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
+  const [isSecure, setIsSecure] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentUrl(url);
+    setIsSecure(url.startsWith('https://'));
+    if (url) {
+      setIsLoading(true);
+      setError(null);
+    }
+  }, [url]);
+
+  const handleIframeLoad = () => {
+    setIsLoading(false);
+    try {
+      if (iframeRef.current?.contentWindow) {
+        const iframeUrl = iframeRef.current.contentWindow.location.href;
+        if (iframeUrl !== 'about:blank') {
+          setCurrentUrl(iframeUrl);
+          onNavigate(iframeUrl);
+          
+          // Try to get title from iframe
+          const iframeTitle = iframeRef.current.contentDocument?.title;
+          if (iframeTitle) {
+            onTitleChange(iframeTitle);
+          }
+        }
+      }
+    } catch (e) {
+      // Cross-origin restrictions prevent access
+    }
+  };
+
+  const handleIframeError = () => {
+    setIsLoading(false);
+    setError('Failed to load website. This site may block embedding or have restrictions.');
+    toast({
+      title: "Loading Error",
+      description: "This website cannot be loaded in the proxy. Try opening it in a new window.",
+      variant: "destructive"
+    });
+  };
+
+  const refresh = () => {
+    if (iframeRef.current) {
+      setIsLoading(true);
+      setError(null);
+      iframeRef.current.src = iframeRef.current.src;
+    }
+  };
+
+  const goHome = () => {
+    onNavigate('');
+    setCurrentUrl('');
+  };
+
+  const navigateToUrl = (targetUrl: string) => {
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+      targetUrl = 'https://' + targetUrl;
+    }
+    onNavigate(targetUrl);
+  };
+
+  const openInNewWindow = () => {
+    if (currentUrl) {
+      window.open(currentUrl, '_blank');
+    }
+  };
+
+  const getDomainName = (url: string) => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return url;
+    }
+  };
+
+  if (!url) {
+    return (
+      <Card className="border-primary/20 bg-card/50 backdrop-blur-sm">
+        <CardContent className="p-8 text-center">
+          <Globe className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-lg font-semibold mb-2">Welcome to The Underground Facility</h3>
+          <p className="text-muted-foreground mb-4">
+            Enter a URL above to start browsing safely and anonymously
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Badge variant="outline" className="bg-primary/10">
+              <Lock className="h-3 w-3 mr-1" />
+              Secure Proxy
+            </Badge>
+            <Badge variant="outline" className="bg-accent/10">
+              Tab Cloaking
+            </Badge>
+            <Badge variant="outline" className="bg-secondary/10">
+              About:Blank Support
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-primary/20 bg-card/50 backdrop-blur-sm">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center space-x-2 text-sm">
+            {isSecure ? (
+              <Lock className="h-4 w-4 text-green-500" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+            )}
+            <span className="truncate max-w-md">{getDomainName(currentUrl)}</span>
+            {isLoading && (
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            )}
+          </CardTitle>
+          
+          <div className="flex items-center space-x-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.history.back()}
+              disabled={!canGoBack}
+              className="h-8 w-8 p-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.history.forward()}
+              disabled={!canGoForward}
+              className="h-8 w-8 p-0"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refresh}
+              className="h-8 w-8 p-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={goHome}
+              className="h-8 w-8 p-0"
+            >
+              <Home className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={openInNewWindow}
+              className="h-8 w-8 p-0"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2 mt-2">
+          <div className="flex-1 relative">
+            <Input
+              type="url"
+              value={currentUrl}
+              onChange={(e) => setCurrentUrl(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  navigateToUrl(currentUrl);
+                }
+              }}
+              className="text-sm border-primary/20 focus:border-primary pl-8"
+              placeholder="Enter URL..."
+            />
+            <Globe className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          </div>
+          <Button
+            size="sm"
+            onClick={() => navigateToUrl(currentUrl)}
+            className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
+          >
+            Go
+          </Button>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="p-0">
+        <div className="relative aspect-video bg-background rounded-lg overflow-hidden border border-primary/20">
+          {error ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-destructive/10">
+              <div className="text-center p-6">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+                <h3 className="text-lg font-semibold mb-2">Cannot Load Website</h3>
+                <p className="text-sm text-muted-foreground mb-4 max-w-md">{error}</p>
+                <div className="flex justify-center space-x-2">
+                  <Button size="sm" onClick={refresh} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Try Again
+                  </Button>
+                  <Button size="sm" onClick={openInNewWindow}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Externally
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+                  <div className="text-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+                    <p className="text-sm text-muted-foreground">Loading {getDomainName(url)}...</p>
+                  </div>
+                </div>
+              )}
+              
+              <iframe
+                ref={iframeRef}
+                src={url}
+                className="w-full h-full border-0"
+                onLoad={handleIframeLoad}
+                onError={handleIframeError}
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation"
+                allow="fullscreen; microphone; camera; midi; encrypted-media; picture-in-picture; display-capture"
+                title={`Proxied content: ${getDomainName(url)}`}
+              />
+            </>
+          )}
+        </div>
+        
+        <div className="p-2 bg-muted/50 border-t border-primary/20">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center space-x-2">
+              <Badge variant={isSecure ? "default" : "secondary"} className="text-xs">
+                {isSecure ? "Secure" : "Insecure"}
+              </Badge>
+              <span>Proxied through The Underground Facility</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm" 
+              onClick={openInNewWindow}
+              className="h-6 text-xs"
+            >
+              <Maximize2 className="h-3 w-3 mr-1" />
+              Fullscreen
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
