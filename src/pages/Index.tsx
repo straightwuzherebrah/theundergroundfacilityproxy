@@ -1,4 +1,4 @@
-import { ProxyInterface } from '@/components/ProxyInterface';
+import ProxyInterface from '@/components/ProxyInterface';
 import { useEffect } from 'react';
 
 const Index = () => {

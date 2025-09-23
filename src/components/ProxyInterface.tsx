@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,9 +12,7 @@ import {
   Globe,
   Gamepad2,
   Youtube,
-  Search,
-  Monitor,
-  Smartphone
+  Search
 } from 'lucide-react';
 import { CloakingSettings } from './CloakingSettings';
 import { TabManager } from './TabManager';
@@ -30,8 +28,7 @@ interface ProxyTab {
   favicon?: string;
 }
 
-export const ProxyInterface = () => {
-  // Fixed duplicate declaration issue
+const ProxyInterface = () => {
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -234,7 +231,7 @@ export const ProxyInterface = () => {
                       <div className="text-white">{link.icon}</div>
                     </div>
                     <p className="text-sm font-medium text-white">{link.name}</p>
-                    <Badge variant="secondary" className="mt-1 text-xs bg-white/20 text-white">
+                    <Badge variant="secondary" className="mt-xs bg-white/20 text-white">
                       {link.category}
                     </Badge>
                   </CardContent>
@@ -325,3 +322,5 @@ export const ProxyInterface = () => {
     </div>
   );
 };
+
+export default ProxyInterface;
