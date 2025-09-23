@@ -31,6 +31,7 @@ interface ProxyTab {
 }
 
 export const ProxyInterface = () => {
+  // Fixed duplicate declaration issue
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
