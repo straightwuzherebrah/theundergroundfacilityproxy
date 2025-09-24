@@ -12,9 +12,11 @@ import {
   Globe,
   AlertTriangle,
   ExternalLink,
-  Maximize2
+  Maximize2,
+  Shield
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { proxyManager } from '@/lib/proxy-utils';
 
 interface ProxyEngineProps {
   url: string;
@@ -37,10 +39,24 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
   const [canGoForward, setCanGoForward] = useState(false);
   const [isSecure, setIsSecure] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [currentProxy, setCurrentProxy] = useState<string>('');
 
   useEffect(() => {
-    setCurrentUrl(url);
-    setIsSecure(url.startsWith('https://'));
+    // Extract original URL if it's proxied
+    let originalUrl = url;
+    if (url.includes('allorigins.win/raw?url=')) {
+      originalUrl = decodeURIComponent(url.split('url=')[1]);
+    } else if (url.includes('corsproxy.io/?')) {
+      originalUrl = decodeURIComponent(url.split('corsproxy.io/?')[1]);
+    } else if (url.includes('cors-anywhere.herokuapp.com/')) {
+      originalUrl = url.replace('https://cors-anywhere.herokuapp.com/', '');
+    } else if (url.includes('thingproxy.freeboard.io/fetch/')) {
+      originalUrl = url.replace('https://thingproxy.freeboard.io/fetch/', '');
+    }
+    
+    setCurrentUrl(originalUrl);
+    setIsSecure(originalUrl.startsWith('https://'));
     if (url) {
       setIsLoading(true);
       setError(null);
@@ -70,12 +86,50 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
 
   const handleIframeError = () => {
     setIsLoading(false);
-    setError('Failed to load website. This site may block embedding or have restrictions.');
-    toast({
-      title: "Loading Error",
-      description: "This website cannot be loaded in the proxy. Try opening it in a new window.",
-      variant: "destructive"
-    });
+    setRetryCount(prev => prev + 1);
+    
+    // Mark current proxy as failed
+    if (currentProxy) {
+      proxyManager.markProxyAsFailed(currentProxy);
+    }
+    
+    if (retryCount < 3 && currentUrl) {
+      // Try next proxy automatically
+      setTimeout(() => {
+        const nextProxiedUrl = getProxiedUrl(currentUrl);
+        console.log(`Attempting retry ${retryCount + 1} with different proxy...`);
+        onNavigate(nextProxiedUrl);
+      }, 1500);
+      
+      setError(`Connection failed. Trying alternative route (${retryCount + 1}/3)...`);
+      toast({
+        title: "Switching Proxy",
+        description: `Attempting alternative route ${retryCount + 1}...`,
+        variant: "default"
+      });
+    } else {
+      // All retries exhausted, try alternatives or show error
+      setError('All proxy routes failed. The site may be heavily restricted or temporarily unavailable.');
+      
+      // Try alternative URLs
+      if (currentUrl) {
+        const alternatives = proxyManager.getAlternativeUrls(currentUrl);
+        if (alternatives.length > 0) {
+          setTimeout(() => {
+            const altUrl = alternatives[0];
+            console.log('Trying alternative URL:', altUrl);
+            navigateToUrl(altUrl);
+          }, 2000);
+          setError('Primary route blocked. Trying alternative access method...');
+        }
+      }
+      
+      toast({
+        title: "Connection Blocked",
+        description: "Site appears to be heavily restricted. Try opening directly or use different network.",
+        variant: "destructive"
+      });
+    }
   };
 
   const refresh = () => {
@@ -91,11 +145,43 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
     setCurrentUrl('');
   };
 
+  const getProxiedUrl = (targetUrl: string) => {
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+      targetUrl = 'https://' + targetUrl;
+    }
+    
+    // Use the advanced proxy manager
+    const proxiedUrl = proxyManager.getNextProxy(targetUrl);
+    if (proxiedUrl) {
+      setCurrentProxy(proxiedUrl.split('/')[2]); // Extract domain for display
+      return proxiedUrl;
+    }
+    
+    // Fallback to direct URL if no proxy available
+    return targetUrl;
+  };
+
   const navigateToUrl = (targetUrl: string) => {
     if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
       targetUrl = 'https://' + targetUrl;
     }
-    onNavigate(targetUrl);
+    
+    setRetryCount(0);
+    setError(null);
+    
+    // Check if URL is likely to be blocked
+    if (proxyManager.isLikelyBlocked(targetUrl)) {
+      toast({
+        title: "High Risk URL Detected",
+        description: "This site may be heavily filtered. Using enhanced bypass methods.",
+        variant: "default"
+      });
+    }
+    
+    // Use proxied URL instead of direct URL
+    const proxiedUrl = getProxiedUrl(targetUrl);
+    onNavigate(proxiedUrl);
+    setCurrentUrl(targetUrl); // Show original URL to user
   };
 
   const openInNewWindow = () => {
@@ -123,14 +209,14 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
           </p>
           <div className="flex flex-wrap gap-2 justify-center">
             <Badge variant="outline" className="bg-primary/10">
-              <Lock className="h-3 w-3 mr-1" />
-              Secure Proxy
+              <Shield className="h-3 w-3 mr-1" />
+              Advanced Proxy
             </Badge>
             <Badge variant="outline" className="bg-accent/10">
-              Tab Cloaking
+              Firewall Bypass
             </Badge>
             <Badge variant="outline" className="bg-secondary/10">
-              About:Blank Support
+              Multi-Route Access
             </Badge>
           </div>
         </CardContent>
@@ -232,16 +318,19 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
             <div className="absolute inset-0 flex items-center justify-center bg-destructive/10">
               <div className="text-center p-6">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-                <h3 className="text-lg font-semibold mb-2">Cannot Load Website</h3>
+                <h3 className="text-lg font-semibold mb-2">Proxy Connection Failed</h3>
                 <p className="text-sm text-muted-foreground mb-4 max-w-md">{error}</p>
-                <div className="flex justify-center space-x-2">
+                <div className="flex justify-center space-x-2 flex-wrap gap-2">
                   <Button size="sm" onClick={refresh} variant="outline">
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    Try Again
+                    Retry Proxy
+                  </Button>
+                  <Button size="sm" onClick={() => navigateToUrl(currentUrl)} variant="outline">
+                    Different Route
                   </Button>
                   <Button size="sm" onClick={openInNewWindow}>
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    Open Externally
+                    Open Direct
                   </Button>
                 </div>
               </div>
@@ -263,33 +352,40 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
                 className="w-full h-full border-0"
                 onLoad={handleIframeLoad}
                 onError={handleIframeError}
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation"
-                allow="fullscreen; microphone; camera; midi; encrypted-media; picture-in-picture; display-capture"
-                title={`Proxied content: ${getDomainName(url)}`}
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation allow-downloads"
+                allow="fullscreen; microphone; camera; midi; encrypted-media; picture-in-picture; display-capture; clipboard-read; clipboard-write"
+                title={`Proxied content: ${getDomainName(currentUrl)}`}
+                referrerPolicy="no-referrer"
+                loading="lazy"
               />
             </>
           )}
         </div>
         
-        <div className="p-2 bg-muted/50 border-t border-primary/20">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center space-x-2">
-              <Badge variant={isSecure ? "default" : "secondary"} className="text-xs">
-                {isSecure ? "Secure" : "Insecure"}
-              </Badge>
-              <span>Proxied through The Underground Facility</span>
+          <div className="p-2 bg-muted/50 border-t border-primary/20">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center space-x-2">
+                <Badge variant={isSecure ? "default" : "secondary"} className="text-xs">
+                  {isSecure ? "Secure" : "Insecure"}
+                </Badge>
+                <span>Proxied via {currentProxy || 'Advanced Route'}</span>
+                {retryCount > 0 && (
+                  <Badge variant="outline" className="text-xs">
+                    Route {retryCount + 1}
+                  </Badge>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm" 
+                onClick={openInNewWindow}
+                className="h-6 text-xs"
+              >
+                <Maximize2 className="h-3 w-3 mr-1" />
+                Direct Access
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm" 
-              onClick={openInNewWindow}
-              className="h-6 text-xs"
-            >
-              <Maximize2 className="h-3 w-3 mr-1" />
-              Fullscreen
-            </Button>
           </div>
-        </div>
       </CardContent>
     </Card>
   );
