@@ -41,6 +41,10 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [currentProxy, setCurrentProxy] = useState<string>('');
+  // Read-mode fallback when iframe embedding is blocked by X-Frame-Options/CSP
+  const [readMode, setReadMode] = useState(false);
+  const [snapshotHtml, setSnapshotHtml] = useState<string | null>(null);
+  const [readModeAttempted, setReadModeAttempted] = useState(false);
 
   useEffect(() => {
     // Extract original URL if it's proxied
@@ -63,6 +67,16 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
     }
   }, [url]);
 
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if ((event as MessageEvent)?.data?.type === 'proxy-navigate' && typeof (event as MessageEvent).data.url === 'string') {
+        navigateToUrl((event as MessageEvent).data.url);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   const handleIframeLoad = () => {
     setIsLoading(false);
     try {
@@ -81,6 +95,60 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
       }
     } catch (e) {
       // Cross-origin restrictions prevent access
+    }
+  };
+
+  // Fetch and render read-only snapshot when iframe embedding is blocked
+  const tryReadModeFetch = async (targetUrl: string) => {
+    setReadModeAttempted(true);
+    setIsLoading(true);
+    const candidates = [
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
+      proxyManager.getNextProxy(targetUrl) || targetUrl
+    ];
+    for (const endpoint of candidates) {
+      try {
+        const res = await fetch(endpoint);
+        const html = await res.text();
+        const built = buildSnapshotHtml(html, targetUrl);
+        setSnapshotHtml(built);
+        setReadMode(true);
+        setIsLoading(false);
+        setError('Embedding blocked by site policy. Showing read-only snapshot.');
+        toast({ title: 'Read Mode Enabled', description: 'Site blocks embedding. Showing snapshot instead.' });
+        return;
+      } catch (e) {
+        console.warn('Read mode fetch failed via endpoint', endpoint, e);
+      }
+    }
+    setReadMode(false);
+    setSnapshotHtml(null);
+    setIsLoading(false);
+  };
+
+  const buildSnapshotHtml = (html: string, baseUrl: string) => {
+    try {
+      // Strip scripts and inline handlers for safety
+      const withoutScripts = html
+        .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+        .replace(/onload=|onclick=|onerror=|onmouseover=/gi, '');
+      const base = `<base href="${baseUrl}">`;
+      const intercept = `
+        <script>
+          (function(){
+            document.addEventListener('click', function(e){
+              var a = e.target && e.target.closest ? e.target.closest('a') : null;
+              if(a && a.href){
+                e.preventDefault();
+                try { window.parent.postMessage({ type: 'proxy-navigate', url: a.href }, '*'); } catch {}
+              }
+            }, true);
+          })();
+        </script>
+      `;
+      return `<!DOCTYPE html><html><head>${base}</head><body>${withoutScripts}${intercept}</body></html>`;
+    } catch {
+      return html;
     }
   };
 
@@ -123,10 +191,15 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
           setError('Primary route blocked. Trying alternative access method...');
         }
       }
+
+      // Fallback to read-only snapshot if embedding is blocked
+      if (!readModeAttempted && currentUrl) {
+        tryReadModeFetch(currentUrl);
+      }
       
       toast({
         title: "Connection Blocked",
-        description: "Site appears to be heavily restricted. Try opening directly or use different network.",
+        description: "Embedding likely blocked by X-Frame-Options/CSP or network filter. Read Mode attempted.",
         variant: "destructive"
       });
     }
@@ -346,18 +419,29 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
                 </div>
               )}
               
-              <iframe
-                ref={iframeRef}
-                src={url}
-                className="w-full h-full border-0"
-                onLoad={handleIframeLoad}
-                onError={handleIframeError}
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation allow-downloads"
-                allow="fullscreen; microphone; camera; midi; encrypted-media; picture-in-picture; display-capture; clipboard-read; clipboard-write"
-                title={`Proxied content: ${getDomainName(currentUrl)}`}
-                referrerPolicy="no-referrer"
-                loading="lazy"
-              />
+              {readMode && snapshotHtml ? (
+                <iframe
+                  ref={iframeRef}
+                  srcDoc={snapshotHtml}
+                  className="w-full h-full border-0"
+                  sandbox="allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
+                  title={`Read mode snapshot: ${getDomainName(currentUrl)}`}
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <iframe
+                  ref={iframeRef}
+                  src={url}
+                  className="w-full h-full border-0"
+                  onLoad={handleIframeLoad}
+                  onError={handleIframeError}
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation allow-downloads"
+                  allow="fullscreen; microphone; camera; midi; encrypted-media; picture-in-picture; display-capture; clipboard-read; clipboard-write"
+                  title={`Proxied content: ${getDomainName(currentUrl)}`}
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                />
+              )}
             </>
           )}
         </div>
