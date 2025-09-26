@@ -15,22 +15,34 @@ export const PROXY_SERVICES: ProxyService[] = [
     priority: 1
   },
   {
+    name: 'CORS Anywhere',
+    baseUrl: 'https://cors-anywhere.herokuapp.com',
+    format: (url: string) => `https://cors-anywhere.herokuapp.com/${url}`,
+    priority: 2
+  },
+  {
     name: 'CORS Proxy',
     baseUrl: 'https://corsproxy.io',
     format: (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    priority: 2
+    priority: 3
   },
   {
     name: 'ThingProxy',
     baseUrl: 'https://thingproxy.freeboard.io',
     format: (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
-    priority: 3
+    priority: 4
   },
   {
     name: 'Proxy6',
     baseUrl: 'https://proxy6.worker.js.org',
     format: (url: string) => `https://proxy6.worker.js.org/?u=${encodeURIComponent(url)}`,
-    priority: 4
+    priority: 5
+  },
+  {
+    name: 'CrossOrigin',
+    baseUrl: 'https://crossorigin.me',
+    format: (url: string) => `https://crossorigin.me/${url}`,
+    priority: 6
   }
 ];
 

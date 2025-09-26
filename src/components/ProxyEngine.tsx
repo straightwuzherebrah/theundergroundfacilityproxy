@@ -175,54 +175,70 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
 
   const handleIframeError = () => {
     setIsLoading(false);
-    setRetryCount(prev => prev + 1);
+    console.log(`Iframe error for ${currentUrl}, retry count: ${retryCount}`);
     
     // Mark current proxy as failed
     if (currentProxy) {
       proxyManager.markProxyAsFailed(currentProxy);
+      console.log(`Marked proxy ${currentProxy} as failed`);
     }
     
-    if (retryCount < 3 && currentUrl) {
-      // Try next proxy automatically
+    if (retryCount < 5 && currentUrl) {
+      setRetryCount(prev => prev + 1);
+      
+      // Try read mode first for faster fallback
+      if (retryCount >= 2 && !readModeAttempted) {
+        console.log('Attempting read mode fallback...');
+        tryReadModeFetch(currentUrl);
+        return;
+      }
+      
+      // Try next proxy automatically with shorter delay
       setTimeout(() => {
         const nextProxiedUrl = getProxiedUrl(currentUrl);
-        console.log(`Attempting retry ${retryCount + 1} with different proxy...`);
+        console.log(`Attempting retry ${retryCount + 1} with proxy: ${nextProxiedUrl}`);
+        setProxiedSrc(nextProxiedUrl);
         onNavigate(nextProxiedUrl);
-      }, 1500);
+      }, 800);
       
-      setError(`Connection failed. Trying alternative route (${retryCount + 1}/3)...`);
+      setError(`Route ${retryCount + 1} failed. Switching proxy service...`);
       toast({
-        title: "Switching Proxy",
-        description: `Attempting alternative route ${retryCount + 1}...`,
+        title: "Switching Route",
+        description: `Trying proxy service ${retryCount + 1}/5...`,
         variant: "default"
       });
     } else {
-      // All retries exhausted, try alternatives or show error
-      setError('All proxy routes failed. The site may be heavily restricted or temporarily unavailable.');
+      // All retries exhausted
+      console.log('All proxy routes failed, trying alternatives...');
+      setError('Multiple proxy routes failed. Attempting direct connection methods...');
       
-      // Try alternative URLs
+      // Try alternative URLs and direct connection
       if (currentUrl) {
         const alternatives = proxyManager.getAlternativeUrls(currentUrl);
         if (alternatives.length > 0) {
           setTimeout(() => {
             const altUrl = alternatives[0];
             console.log('Trying alternative URL:', altUrl);
+            setRetryCount(0); // Reset for alternative URL
             navigateToUrl(altUrl);
-          }, 2000);
-          setError('Primary route blocked. Trying alternative access method...');
+          }, 1000);
+          setError('Trying alternative URL format...');
+          return;
         }
       }
 
-      // Fallback to read-only snapshot if embedding is blocked
+      // Final fallback to read mode
       if (!readModeAttempted && currentUrl) {
+        console.log('Final fallback to read mode...');
         tryReadModeFetch(currentUrl);
+      } else {
+        setError('Connection failed. Site may be blocking all proxy access or network restrictions are active.');
+        toast({
+          title: "Connection Failed",
+          description: "Unable to access site through any available route. Try a different URL.",
+          variant: "destructive"
+        });
       }
-      
-      toast({
-        title: "Connection Blocked",
-        description: "Embedding likely blocked by X-Frame-Options/CSP or network filter. Read Mode attempted.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -294,22 +310,24 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
 
   if (!url) {
     return (
-      <Card className="border-primary/20 bg-card/50 backdrop-blur-sm">
-        <CardContent className="p-8 text-center">
-          <Globe className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-semibold mb-2">Welcome to The Underground Facility</h3>
-          <p className="text-muted-foreground mb-4">
-            Enter a URL above to start browsing safely and anonymously
+      <Card className="glass-card">
+        <CardContent className="p-12 text-center">
+          <div className="mx-auto w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-6">
+            <Globe className="h-10 w-10 text-primary" />
+          </div>
+          <h3 className="text-xl font-semibold mb-3">Welcome to The Underground Facility</h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Enter a URL above to start browsing safely and anonymously through our advanced proxy network
           </p>
-          <div className="flex flex-wrap gap-2 justify-center">
-            <Badge variant="outline" className="bg-primary/10">
-              <Shield className="h-3 w-3 mr-1" />
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Badge className="glass px-4 py-2 text-sm">
+              <Shield className="h-4 w-4 mr-2" />
               Advanced Proxy
             </Badge>
-            <Badge variant="outline" className="bg-accent/10">
+            <Badge className="glass px-4 py-2 text-sm">
               Firewall Bypass
             </Badge>
-            <Badge variant="outline" className="bg-secondary/10">
+            <Badge className="glass px-4 py-2 text-sm">
               Multi-Route Access
             </Badge>
           </div>
@@ -319,18 +337,20 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
   }
 
   return (
-    <Card className="border-primary/20 bg-card/50 backdrop-blur-sm">
-      <CardHeader className="pb-2">
+    <Card className="glass-card">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2 text-sm">
-            {isSecure ? (
-              <Lock className="h-4 w-4 text-green-500" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-            )}
-            <span className="truncate max-w-md">{getDomainName(currentUrl)}</span>
+          <CardTitle className="flex items-center space-x-3 text-base">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center">
+              {isSecure ? (
+                <Lock className="h-4 w-4 text-green-500" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              )}
+            </div>
+            <span className="truncate max-w-md font-medium">{getDomainName(currentUrl)}</span>
             {isLoading && (
-              <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             )}
           </CardTitle>
           

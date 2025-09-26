@@ -44,10 +44,15 @@ All colors MUST be HSL.
     --gradient-secondary: linear-gradient(135deg, hsl(315 25% 90%) 0%, hsl(280 25% 95%) 100%);
     --gradient-hero: linear-gradient(135deg, hsl(315 85% 45%) 0%, hsl(280 85% 55%) 25%, hsl(245 85% 65%) 50%, hsl(210 85% 70%) 75%, hsl(315 85% 75%) 100%);
     
-    /* Glass morphism effects */
-    --glass-bg: hsla(315, 85%, 95%, 0.1);
-    --glass-border: hsla(315, 85%, 85%, 0.2);
-    --glass-shadow: 0 8px 32px hsla(315, 85%, 25%, 0.1);
+    /* Glass morphism effects - iOS 16 style liquid glass */
+    --glass-bg: hsla(315, 85%, 98%, 0.08);
+    --glass-bg-hover: hsla(315, 85%, 98%, 0.12);
+    --glass-border: hsla(315, 85%, 90%, 0.18);
+    --glass-border-hover: hsla(315, 85%, 90%, 0.25);
+    --glass-shadow: 0 8px 32px hsla(315, 85%, 25%, 0.08);
+    --glass-shadow-hover: 0 12px 40px hsla(315, 85%, 25%, 0.12);
+    --glass-blur: blur(24px);
+    --glass-blur-strong: blur(40px);
     
     /* Animation transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -105,10 +110,15 @@ All colors MUST be HSL.
     --gradient-secondary: linear-gradient(135deg, hsl(220 25% 15%) 0%, hsl(280 25% 20%) 100%);
     --gradient-hero: linear-gradient(135deg, hsl(315 85% 25%) 0%, hsl(280 85% 35%) 25%, hsl(245 85% 45%) 50%, hsl(210 85% 50%) 75%, hsl(315 85% 55%) 100%);
     
-    /* Dark glass effects */
-    --glass-bg: hsla(220, 25%, 5%, 0.3);
-    --glass-border: hsla(315, 85%, 65%, 0.2);
-    --glass-shadow: 0 8px 32px hsla(315, 85%, 15%, 0.3);
+    /* Dark glass effects - iOS 16 style liquid glass */
+    --glass-bg: hsla(220, 25%, 5%, 0.15);
+    --glass-bg-hover: hsla(220, 25%, 5%, 0.25);
+    --glass-border: hsla(315, 85%, 65%, 0.15);
+    --glass-border-hover: hsla(315, 85%, 65%, 0.25);
+    --glass-shadow: 0 8px 32px hsla(315, 85%, 15%, 0.25);
+    --glass-shadow-hover: 0 12px 40px hsla(315, 85%, 15%, 0.35);
+    --glass-blur: blur(24px);
+    --glass-blur-strong: blur(40px);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -133,10 +143,89 @@ All colors MUST be HSL.
 @layer components {
   .glass {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
     transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .glass::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsla(0, 0%, 100%, 0.4), transparent);
+    transition: var(--transition-smooth);
+  }
+  
+  .glass:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-hover);
+    box-shadow: var(--glass-shadow-hover);
+    transform: translateY(-1px);
+  }
+  
+  .glass-strong {
+    backdrop-filter: var(--glass-blur-strong);
+    -webkit-backdrop-filter: var(--glass-blur-strong);
+    background: var(--glass-bg-hover);
+    border: 1px solid var(--glass-border-hover);
+    box-shadow: var(--glass-shadow-hover);
+  }
+  
+  .glass-card {
+    @apply glass;
+    border-radius: calc(var(--radius) + 4px);
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  
+  .glass-card:hover {
+    transform: translateY(-2px) scale(1.02);
+  }
+  
+  .liquid-button {
+    @apply glass;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .liquid-button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: radial-gradient(circle, hsla(315, 85%, 85%, 0.3) 0%, transparent 70%);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+  }
+  
+  .liquid-button:hover::after {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .liquid-input {
+    @apply glass;
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .liquid-input:focus {
+    backdrop-filter: var(--glass-blur-strong);
+    -webkit-backdrop-filter: var(--glass-blur-strong);
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsla(var(--primary), 0.2), var(--glass-shadow-hover);
   }
 }

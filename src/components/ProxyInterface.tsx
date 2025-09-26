@@ -175,9 +175,9 @@ const ProxyInterface = () => {
         />
 
         {/* URL Input */}
-        <Card className="glass">
+        <Card className="glass-card">
           <CardContent className="p-4">
-            <div className="flex space-x-2">
+            <div className="flex space-x-3">
               <div className="flex-1 relative">
                 <Input
                   type="url"
@@ -185,19 +185,19 @@ const ProxyInterface = () => {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleNavigate(url)}
-                  className="glass pl-10 text-foreground placeholder:text-foreground/60"
+                  className="liquid-input pl-12 h-12 text-foreground placeholder:text-foreground/60 border-0"
                 />
-                <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 opacity-70 text-foreground" />
+                <Globe className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-foreground/70" />
               </div>
               <Button 
                 onClick={() => handleNavigate(url)}
                 disabled={isLoading}
-                className="glass"
+                className="liquid-button h-12 px-6"
               >
                 {isLoading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 ) : (
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="h-5 w-5" />
                 )}
               </Button>
             </div>
@@ -206,14 +206,14 @@ const ProxyInterface = () => {
 
         {/* Quick Access */}
         <Tabs defaultValue="sites" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white/10 backdrop-blur-sm border border-white/20">
-            <TabsTrigger value="sites" className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80">
+          <TabsList className="glass-strong grid w-full grid-cols-3 h-12">
+            <TabsTrigger value="sites" className="data-[state=active]:glass-strong data-[state=active]:text-foreground text-foreground/80 rounded-lg">
               Popular Sites
             </TabsTrigger>
-            <TabsTrigger value="games" className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80">
+            <TabsTrigger value="games" className="data-[state=active]:glass-strong data-[state=active]:text-foreground text-foreground/80 rounded-lg">
               Games
             </TabsTrigger>
-            <TabsTrigger value="tools" className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/80">
+            <TabsTrigger value="tools" className="data-[state=active]:glass-strong data-[state=active]:text-foreground text-foreground/80 rounded-lg">
               Tools
             </TabsTrigger>
           </TabsList>
@@ -223,15 +223,15 @@ const ProxyInterface = () => {
               {quickLinks.map((link) => (
                 <Card 
                   key={link.name}
-                  className="cursor-pointer transition-all duration-300 hover:scale-105 glass"
+                  className="cursor-pointer glass-card group"
                   onClick={() => handleNavigate(link.url)}
                 >
                   <CardContent className="p-4 text-center">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-2">
-                      <div className="text-foreground">{link.icon}</div>
+                    <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                      <div className="text-foreground text-lg">{link.icon}</div>
                     </div>
-                    <p className="text-sm font-medium text-foreground">{link.name}</p>
-                    <Badge variant="secondary" className="mt-xs bg-foreground/10 text-foreground">
+                    <p className="text-sm font-medium text-foreground mb-1">{link.name}</p>
+                    <Badge variant="secondary" className="glass text-xs">
                       {link.category}
                     </Badge>
                   </CardContent>
@@ -245,12 +245,12 @@ const ProxyInterface = () => {
               {games.map((game) => (
                 <Card 
                   key={game.name}
-                  className="cursor-pointer transition-all duration-300 hover:scale-105 glass"
+                  className="cursor-pointer glass-card group"
                   onClick={() => handleNavigate(game.url)}
                 >
                   <CardContent className="p-4 text-center">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-2">
-                      <div className="text-foreground">{game.icon}</div>
+                    <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                      <div className="text-foreground text-lg">{game.icon}</div>
                     </div>
                     <p className="text-sm font-medium text-foreground">{game.name}</p>
                   </CardContent>
