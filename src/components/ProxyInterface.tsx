@@ -137,7 +137,7 @@ const ProxyInterface = () => {
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                 <Shield className="h-4 w-4 text-primary-foreground" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
                 The Underground Facility
               </h1>
             </div>
@@ -148,7 +148,7 @@ const ProxyInterface = () => {
               variant="outline" 
               size="sm"
               onClick={() => setShowAdvanced(true)}
-              className="border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm"
+              className="glass"
             >
               <Settings className="h-4 w-4 mr-2" />
               Features
@@ -157,7 +157,7 @@ const ProxyInterface = () => {
               variant="outline"
               size="sm"
               onClick={() => setShowSettings(true)}
-              className="border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm"
+              className="glass"
             >
               <Eye className="h-4 w-4 mr-2" />
               Cloaking
@@ -175,7 +175,7 @@ const ProxyInterface = () => {
         />
 
         {/* URL Input */}
-        <Card className="border-white/20 bg-white/10 backdrop-blur-sm">
+        <Card className="glass">
           <CardContent className="p-4">
             <div className="flex space-x-2">
               <div className="flex-1 relative">
@@ -185,17 +185,17 @@ const ProxyInterface = () => {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleNavigate(url)}
-                  className="pl-10 border-white/20 bg-white/10 text-white placeholder:text-white/60 focus:border-white/40"
+                  className="glass pl-10 text-foreground placeholder:text-foreground/60"
                 />
-                <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+                <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 opacity-70 text-foreground" />
               </div>
               <Button 
                 onClick={() => handleNavigate(url)}
                 disabled={isLoading}
-                className="bg-gradient-to-r from-white/20 to-white/10 hover:from-white/30 hover:to-white/20 text-white border border-white/20"
+                className="glass"
               >
                 {isLoading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 ) : (
                   <ExternalLink className="h-4 w-4" />
                 )}
@@ -223,15 +223,15 @@ const ProxyInterface = () => {
               {quickLinks.map((link) => (
                 <Card 
                   key={link.name}
-                  className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg border-white/20 bg-white/10 backdrop-blur-sm hover:bg-white/20"
+                  className="cursor-pointer transition-all duration-300 hover:scale-105 glass"
                   onClick={() => handleNavigate(link.url)}
                 >
                   <CardContent className="p-4 text-center">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-white/20 to-white/10 flex items-center justify-center mb-2">
-                      <div className="text-white">{link.icon}</div>
+                    <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-2">
+                      <div className="text-foreground">{link.icon}</div>
                     </div>
-                    <p className="text-sm font-medium text-white">{link.name}</p>
-                    <Badge variant="secondary" className="mt-xs bg-white/20 text-white">
+                    <p className="text-sm font-medium text-foreground">{link.name}</p>
+                    <Badge variant="secondary" className="mt-xs bg-foreground/10 text-foreground">
                       {link.category}
                     </Badge>
                   </CardContent>
@@ -245,14 +245,14 @@ const ProxyInterface = () => {
               {games.map((game) => (
                 <Card 
                   key={game.name}
-                  className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg border-white/20 bg-white/10 backdrop-blur-sm hover:bg-white/20"
+                  className="cursor-pointer transition-all duration-300 hover:scale-105 glass"
                   onClick={() => handleNavigate(game.url)}
                 >
                   <CardContent className="p-4 text-center">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-white/20 to-white/10 flex items-center justify-center mb-2">
-                      <div className="text-white">{game.icon}</div>
+                    <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-2">
+                      <div className="text-foreground">{game.icon}</div>
                     </div>
-                    <p className="text-sm font-medium text-white">{game.name}</p>
+                    <p className="text-sm font-medium text-foreground">{game.name}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -261,23 +261,23 @@ const ProxyInterface = () => {
 
           <TabsContent value="tools" className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-white/20 bg-white/10 backdrop-blur-sm">
+              <Card className="glass">
                 <CardContent className="p-4 text-center">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-white/20 to-white/10 flex items-center justify-center mb-2">
-                    <Shield className="h-6 w-6 text-white" />
+                  <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-2">
+                    <Shield className="h-6 w-6 text-foreground" />
                   </div>
-                  <p className="text-sm font-medium text-white">Proxy Status</p>
-                  <Badge className="mt-1 bg-green-500/20 text-green-300">Active</Badge>
+                  <p className="text-sm font-medium text-foreground">Proxy Status</p>
+                  <Badge variant="secondary" className="mt-1">Active</Badge>
                 </CardContent>
               </Card>
               
-              <Card className="border-white/20 bg-white/10 backdrop-blur-sm">
+              <Card className="glass">
                 <CardContent className="p-4 text-center">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-white/20 to-white/10 flex items-center justify-center mb-2">
-                    <Eye className="h-6 w-6 text-white" />
+                  <div className="mx-auto w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-2">
+                    <Eye className="h-6 w-6 text-foreground" />
                   </div>
-                  <p className="text-sm font-medium text-white">Tab Cloaking</p>
-                  <Badge className="mt-1 bg-blue-500/20 text-blue-300">Enabled</Badge>
+                  <p className="text-sm font-medium text-foreground">Tab Cloaking</p>
+                  <Badge variant="secondary" className="mt-1">Enabled</Badge>
                 </CardContent>
               </Card>
             </div>

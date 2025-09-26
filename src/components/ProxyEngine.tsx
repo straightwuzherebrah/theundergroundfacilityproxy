@@ -41,29 +41,47 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [currentProxy, setCurrentProxy] = useState<string>('');
+  const [proxiedSrc, setProxiedSrc] = useState<string>('');
   // Read-mode fallback when iframe embedding is blocked by X-Frame-Options/CSP
   const [readMode, setReadMode] = useState(false);
   const [snapshotHtml, setSnapshotHtml] = useState<string | null>(null);
   const [readModeAttempted, setReadModeAttempted] = useState(false);
 
   useEffect(() => {
-    // Extract original URL if it's proxied
+    // Extract original URL if it's proxied and always compute a proxied src for the iframe
     let originalUrl = url;
-    if (url.includes('allorigins.win/raw?url=')) {
-      originalUrl = decodeURIComponent(url.split('url=')[1]);
-    } else if (url.includes('corsproxy.io/?')) {
-      originalUrl = decodeURIComponent(url.split('corsproxy.io/?')[1]);
-    } else if (url.includes('cors-anywhere.herokuapp.com/')) {
-      originalUrl = url.replace('https://cors-anywhere.herokuapp.com/', '');
-    } else if (url.includes('thingproxy.freeboard.io/fetch/')) {
-      originalUrl = url.replace('https://thingproxy.freeboard.io/fetch/', '');
-    }
-    
+    try {
+      if (url.includes('allorigins.win/raw?url=')) {
+        originalUrl = decodeURIComponent(url.split('url=')[1]);
+      } else if (url.includes('corsproxy.io/?')) {
+        originalUrl = decodeURIComponent(url.split('corsproxy.io/?')[1]);
+      } else if (url.includes('cors-anywhere.herokuapp.com/')) {
+        originalUrl = url.replace('https://cors-anywhere.herokuapp.com/', '');
+      } else if (url.includes('thingproxy.freeboard.io/fetch/')) {
+        originalUrl = url.replace('https://thingproxy.freeboard.io/fetch/', '');
+      } else if (url.includes('proxy6.worker.js.org/?u=')) {
+        originalUrl = decodeURIComponent(url.split('proxy6.worker.js.org/?u=')[1]);
+      }
+    } catch {}
+
     setCurrentUrl(originalUrl);
     setIsSecure(originalUrl.startsWith('https://'));
-    if (url) {
+
+    // Reset read mode state when navigating to a fresh URL
+    setReadMode(false);
+    setSnapshotHtml(null);
+
+    if (originalUrl) {
       setIsLoading(true);
       setError(null);
+      const next = getProxiedUrl(originalUrl);
+      setProxiedSrc(next);
+      try {
+        const host = new URL(next).hostname;
+        setCurrentProxy(host);
+      } catch {}
+    } else {
+      setProxiedSrc('');
     }
   }, [url]);
 
@@ -103,6 +121,9 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
     setReadModeAttempted(true);
     setIsLoading(true);
     const candidates = [
+      // Jina reader mirror (read-only, ignores site scripts/CSP)
+      `https://r.jina.ai/http/${targetUrl.replace(/^https?:\/\//, '')}`,
+      `https://r.jina.ai/https/${targetUrl.replace(/^https?:\/\//, '')}`,
       `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
       proxyManager.getNextProxy(targetUrl) || targetUrl
     ];
@@ -431,7 +452,7 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
               ) : (
                 <iframe
                   ref={iframeRef}
-                  src={url}
+                  src={proxiedSrc || url}
                   className="w-full h-full border-0"
                   onLoad={handleIframeLoad}
                   onError={handleIframeError}
