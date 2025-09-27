@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,11 @@ import {
   Server,
   Database,
   Clock,
-  Settings
+  Settings,
+  Upload
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useSettings } from '@/hooks/useSettings';
 
 interface AdvancedFeaturesProps {
   isVisible: boolean;
@@ -33,39 +35,8 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
   onClose 
 }) => {
   const { toast } = useToast();
-  const [features, setFeatures] = useState({
-    // Interstellar Features
-    dynamicTitle: true,
-    favicon: 'https://classroom.google.com/favicon.ico',
-    customTitle: 'Google Classroom',
-    aboutBlank: false,
-    panicKey: 'Escape',
-    historyFlooding: false,
-    
-    // Proxy Features
-    userAgent: 'default',
-    cookieHandling: true,
-    javascriptEnabled: true,
-    adBlocker: false,
-    popupBlocker: true,
-    
-    // Security Features
-    httpsUpgrade: true,
-    referrerPolicy: 'no-referrer',
-    corsProxy: true,
-    ipSpoofing: false,
-    
-    // Performance Features
-    cacheEnabled: true,
-    compression: true,
-    prefetch: false,
-    
-    // Stealth Features
-    fingerPrintResistance: true,
-    canvasBlocking: false,
-    webRTCBlocking: true,
-    geolocationBlocking: true
-  });
+  const { settings, updateSetting, enableAboutBlank, exportSettings, importSettings } = useSettings();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const presetTitles = [
     { name: 'Google Classroom', title: 'Google Classroom', favicon: 'https://classroom.google.com/favicon.ico' },
@@ -84,136 +55,64 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
     { name: 'Mobile Chrome', value: 'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36' }
   ];
 
-  const updateFeature = (key: string, value: any) => {
-    setFeatures(prev => ({ ...prev, [key]: value }));
+  const updateFeature = (key: keyof typeof settings, value: any) => {
+    updateSetting(key, value);
     
-    // Apply feature immediately
+    // Show feedback for certain features
     switch (key) {
-      case 'customTitle':
-      case 'dynamicTitle':
-        if (features.dynamicTitle) {
-          document.title = value || 'The Underground Facility';
-        }
-        break;
-      case 'favicon':
-        updateFavicon(value);
-        break;
-      case 'aboutBlank':
+      case 'historyFlooding':
         if (value) {
-          enableAboutBlank();
+          toast({
+            title: "History Flooding Enabled",
+            description: "Browser history will be flooded with educational sites",
+          });
         }
         break;
       case 'panicKey':
-        setupPanicKey(value);
-        break;
-      case 'historyFlooding':
-        if (value) {
-          startHistoryFlooding();
-        }
+        toast({
+          title: "Panic Key Updated",
+          description: `Press ${value} to quickly redirect to safe URL`,
+        });
         break;
     }
   };
 
-  const updateFavicon = (faviconUrl: string) => {
-    const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
-    link.type = 'image/x-icon';
-    link.rel = 'shortcut icon';
-    link.href = faviconUrl;
-    document.getElementsByTagName('head')[0].appendChild(link);
-  };
-
-  const enableAboutBlank = () => {
-    const newWindow = window.open('about:blank', '_blank');
-    if (newWindow) {
-      newWindow.document.write(`
-        <html>
-          <head>
-            <title>${features.customTitle}</title>
-            <link rel="icon" href="${features.favicon}">
-          </head>
-          <body style="margin:0;padding:0;">
-            <iframe src="${window.location.href}" style="width:100%;height:100vh;border:none;"></iframe>
-          </body>
-        </html>
-      `);
-      newWindow.document.close();
-      window.location.href = 'about:blank';
+  const handleAboutBlank = () => {
+    const success = enableAboutBlank();
+    if (success) {
+      toast({
+        title: "About:Blank Window Opened",
+        description: "New cloaked window created successfully",
+      });
+    } else {
+      toast({
+        title: "Failed to Open Window",
+        description: "Please allow popups for this site",
+        variant: "destructive"
+      });
     }
   };
 
-  const setupPanicKey = (key: string) => {
-    document.addEventListener('keydown', (e) => {
-      if (e.key === key) {
-        window.location.href = 'https://classroom.google.com';
-      }
-    });
-  };
-
-  const startHistoryFlooding = () => {
-    const urls = [
-      'https://classroom.google.com',
-      'https://www.khanacademy.org',
-      'https://www.wikipedia.org',
-      'https://docs.google.com',
-      'https://www.edpuzzle.com'
-    ];
-    
-    for (let i = 0; i < 50; i++) {
-      const randomUrl = urls[Math.floor(Math.random() * urls.length)];
-      window.history.pushState({}, '', randomUrl);
+  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      importSettings(file);
+    }
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
   const applyPreset = (preset: typeof presetTitles[0]) => {
     updateFeature('customTitle', preset.title);
-    updateFeature('favicon', preset.favicon);
+    updateFeature('customFavicon', preset.favicon);
     
     toast({
       title: "Preset Applied",
       description: `Tab disguised as ${preset.name}`,
     });
   };
-
-  const exportSettings = () => {
-    const settingsBlob = new Blob([JSON.stringify(features, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(settingsBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'underground-facility-settings.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importSettings = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const importedSettings = JSON.parse(e.target?.result as string);
-          setFeatures(importedSettings);
-          toast({
-            title: "Settings Imported",
-            description: "Your settings have been successfully imported",
-          });
-        } catch (error) {
-          toast({
-            title: "Import Failed",
-            description: "Invalid settings file",
-            variant: "destructive"
-          });
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  useEffect(() => {
-    if (features.dynamicTitle) {
-      document.title = features.customTitle;
-    }
-    updateFavicon(features.favicon);
-  }, [features.customTitle, features.favicon, features.dynamicTitle]);
 
   if (!isVisible) return null;
 
@@ -245,7 +144,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="customTitle">Custom Tab Title</Label>
                 <Input
                   id="customTitle"
-                  value={features.customTitle}
+                  value={settings.customTitle}
                   onChange={(e) => updateFeature('customTitle', e.target.value)}
                   placeholder="Enter custom title..."
                 />
@@ -255,8 +154,8 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="favicon">Favicon URL</Label>
                 <Input
                   id="favicon"
-                  value={features.favicon}
-                  onChange={(e) => updateFeature('favicon', e.target.value)}
+                  value={settings.customFavicon}
+                  onChange={(e) => updateFeature('customFavicon', e.target.value)}
                   placeholder="Enter favicon URL..."
                 />
               </div>
@@ -285,18 +184,20 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="dynamicTitle">Dynamic Title Updates</Label>
                 <Switch
                   id="dynamicTitle"
-                  checked={features.dynamicTitle}
+                  checked={settings.dynamicTitle}
                   onCheckedChange={(checked) => updateFeature('dynamicTitle', checked)}
                 />
               </div>
               
               <div className="flex items-center justify-between">
                 <Label htmlFor="aboutBlank">About:Blank Cloaking</Label>
-                <Switch
-                  id="aboutBlank"
-                  checked={features.aboutBlank}
-                  onCheckedChange={(checked) => updateFeature('aboutBlank', checked)}
-                />
+                <Button
+                  onClick={handleAboutBlank}
+                  variant="outline"
+                  size="sm"
+                >
+                  Open About:Blank
+                </Button>
               </div>
             </div>
             
@@ -305,7 +206,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="panicKey">Panic Key</Label>
                 <Input
                   id="panicKey"
-                  value={features.panicKey}
+                  value={settings.panicKey}
                   onChange={(e) => updateFeature('panicKey', e.target.value)}
                   placeholder="Enter key (e.g., Escape)"
                 />
@@ -315,7 +216,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="historyFlooding">History Flooding</Label>
                 <Switch
                   id="historyFlooding"
-                  checked={features.historyFlooding}
+                  checked={settings.historyFlooding}
                   onCheckedChange={(checked) => updateFeature('historyFlooding', checked)}
                 />
               </div>
@@ -335,7 +236,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
               <Label htmlFor="userAgent">User Agent</Label>
               <select
                 id="userAgent"
-                value={features.userAgent}
+                value={settings.userAgent}
                 onChange={(e) => updateFeature('userAgent', e.target.value)}
                 className="w-full p-2 border border-primary/20 rounded-md bg-background"
               >
@@ -352,7 +253,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="cookieHandling">Cookie Handling</Label>
                 <Switch
                   id="cookieHandling"
-                  checked={features.cookieHandling}
+                  checked={settings.cookieHandling}
                   onCheckedChange={(checked) => updateFeature('cookieHandling', checked)}
                 />
               </div>
@@ -361,7 +262,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="javascriptEnabled">Enable JavaScript</Label>
                 <Switch
                   id="javascriptEnabled"
-                  checked={features.javascriptEnabled}
+                  checked={settings.javascriptEnabled}
                   onCheckedChange={(checked) => updateFeature('javascriptEnabled', checked)}
                 />
               </div>
@@ -372,7 +273,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="httpsUpgrade">HTTPS Upgrade</Label>
                 <Switch
                   id="httpsUpgrade"
-                  checked={features.httpsUpgrade}
+                  checked={settings.httpsUpgrade}
                   onCheckedChange={(checked) => updateFeature('httpsUpgrade', checked)}
                 />
               </div>
@@ -381,7 +282,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="corsProxy">CORS Proxy</Label>
                 <Switch
                   id="corsProxy"
-                  checked={features.corsProxy}
+                  checked={settings.corsProxy}
                   onCheckedChange={(checked) => updateFeature('corsProxy', checked)}
                 />
               </div>
@@ -402,7 +303,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="fingerPrintResistance">Fingerprint Resistance</Label>
                 <Switch
                   id="fingerPrintResistance"
-                  checked={features.fingerPrintResistance}
+                  checked={settings.fingerPrintResistance}
                   onCheckedChange={(checked) => updateFeature('fingerPrintResistance', checked)}
                 />
               </div>
@@ -411,7 +312,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="webRTCBlocking">Block WebRTC</Label>
                 <Switch
                   id="webRTCBlocking"
-                  checked={features.webRTCBlocking}
+                  checked={settings.webRTCBlocking}
                   onCheckedChange={(checked) => updateFeature('webRTCBlocking', checked)}
                 />
               </div>
@@ -422,7 +323,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="geolocationBlocking">Block Geolocation</Label>
                 <Switch
                   id="geolocationBlocking"
-                  checked={features.geolocationBlocking}
+                  checked={settings.geolocationBlocking}
                   onCheckedChange={(checked) => updateFeature('geolocationBlocking', checked)}
                 />
               </div>
@@ -431,7 +332,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="adBlocker">Ad Blocker</Label>
                 <Switch
                   id="adBlocker"
-                  checked={features.adBlocker}
+                  checked={settings.adBlocker}
                   onCheckedChange={(checked) => updateFeature('adBlocker', checked)}
                 />
               </div>
@@ -452,7 +353,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="cacheEnabled">Enable Caching</Label>
                 <Switch
                   id="cacheEnabled"
-                  checked={features.cacheEnabled}
+                  checked={settings.cacheEnabled}
                   onCheckedChange={(checked) => updateFeature('cacheEnabled', checked)}
                 />
               </div>
@@ -461,7 +362,7 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
                 <Label htmlFor="compression">Enable Compression</Label>
                 <Switch
                   id="compression"
-                  checked={features.compression}
+                  checked={settings.compression}
                   onCheckedChange={(checked) => updateFeature('compression', checked)}
                 />
               </div>
@@ -481,39 +382,21 @@ export const AdvancedFeatures: React.FC<AdvancedFeaturesProps> = ({
               <Button onClick={exportSettings} variant="outline">
                 Export Settings
               </Button>
-              <Button asChild variant="outline">
-                <label htmlFor="importSettings" className="cursor-pointer">
-                  Import Settings
-                  <input
-                    id="importSettings"
-                    type="file"
-                    accept=".json"
-                    onChange={importSettings}
-                    className="hidden"
-                  />
-                </label>
+              <Button 
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import Settings
               </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleImportFile}
+                className="hidden"
+              />
             </div>
-          </div>
-          
-          {/* Status Indicators */}
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={features.dynamicTitle ? "default" : "secondary"}>
-              <Eye className="h-3 w-3 mr-1" />
-              Tab Cloaking: {features.dynamicTitle ? 'ON' : 'OFF'}
-            </Badge>
-            <Badge variant={features.httpsUpgrade ? "default" : "secondary"}>
-              <Lock className="h-3 w-3 mr-1" />
-              HTTPS: {features.httpsUpgrade ? 'ON' : 'OFF'}
-            </Badge>
-            <Badge variant={features.corsProxy ? "default" : "secondary"}>
-              <Server className="h-3 w-3 mr-1" />
-              CORS Proxy: {features.corsProxy ? 'ON' : 'OFF'}
-            </Badge>
-            <Badge variant={features.fingerPrintResistance ? "default" : "secondary"}>
-              <Shield className="h-3 w-3 mr-1" />
-              Fingerprint Protection: {features.fingerPrintResistance ? 'ON' : 'OFF'}
-            </Badge>
           </div>
         </CardContent>
       </Card>

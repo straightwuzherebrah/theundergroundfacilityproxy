@@ -19,6 +19,8 @@ import { TabManager } from './TabManager';
 import { WindowPopout } from './WindowPopout';
 import { ProxyEngine } from './ProxyEngine';
 import { AdvancedFeatures } from './AdvancedFeatures';
+import { useSettings } from '@/hooks/useSettings';
+import { useTheme } from '@/hooks/useTheme';
 
 interface ProxyTab {
   id: string;
@@ -177,30 +179,33 @@ const ProxyInterface = () => {
         {/* URL Input */}
         <Card className="glass-card">
           <CardContent className="p-4">
-            <div className="flex space-x-3">
-              <div className="flex-1 relative">
-                <Input
-                  type="url"
-                  placeholder="Enter URL or search term..."
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleNavigate(url)}
-                  className="liquid-input pl-12 h-12 text-foreground placeholder:text-foreground/60 border-0"
-                />
-                <Globe className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-foreground/70" />
+              <div className="flex space-x-3">
+                <div className="flex-1 relative">
+                  <Input
+                    type="url"
+                    placeholder="Enter URL or search term..."
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleNavigate(url)}
+                    className="liquid-input pl-12 h-12 text-foreground placeholder:text-foreground/60 border-0"
+                  />
+                  <Globe className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-foreground/70" />
+                </div>
+                <Button 
+                  onClick={() => handleNavigate(url)}
+                  disabled={isLoading}
+                  className="liquid-button h-12 px-6"
+                >
+                  {isLoading ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <ExternalLink className="h-5 w-5" />
+                  )}
+                </Button>
+                
+                {/* Window Popout Controls */}
+                <WindowPopout url={url} title={currentTab?.title || 'The Underground Facility'} />
               </div>
-              <Button 
-                onClick={() => handleNavigate(url)}
-                disabled={isLoading}
-                className="liquid-button h-12 px-6"
-              >
-                {isLoading ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                ) : (
-                  <ExternalLink className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
           </CardContent>
         </Card>
 

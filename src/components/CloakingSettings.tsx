@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { 
   X, 
@@ -19,9 +18,12 @@ import {
   Settings,
   Monitor,
   Smartphone,
-  Globe
+  Globe,
+  Upload
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useSettings } from '@/hooks/useSettings';
+import { useTheme } from '@/hooks/useTheme';
 
 interface CloakingSettingsProps {
   onClose: () => void;
@@ -29,20 +31,11 @@ interface CloakingSettingsProps {
 
 export const CloakingSettings: React.FC<CloakingSettingsProps> = ({ onClose }) => {
   const { toast } = useToast();
-  const [settings, setSettings] = useState({
-    tabCloaking: true,
-    aboutBlankCloaking: false,
-    customTitle: 'Google',
-    customFavicon: 'https://www.google.com/favicon.ico',
-    theme: 'pink',
-    passwordProtection: false,
-    password: '',
-    hideInHistory: true,
-    panicKey: 'Space',
-    panicUrl: 'https://classroom.google.com'
-  });
+  const { settings, updateSetting, enableAboutBlank, exportSettings, importSettings } = useSettings();
+  const { theme, changeTheme, themes } = useTheme();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const themes = [
+  const themeOptions = [
     { id: 'pink', name: 'Pink (Default)', colors: ['#ec4899', '#f472b6'] },
     { id: 'blue', name: 'Ocean Blue', colors: ['#3b82f6', '#60a5fa'] },
     { id: 'purple', name: 'Galaxy Purple', colors: ['#8b5cf6', '#a78bfa'] },
@@ -65,19 +58,8 @@ export const CloakingSettings: React.FC<CloakingSettingsProps> = ({ onClose }) =
     { name: 'Khan Academy', title: 'Khan Academy', favicon: 'https://www.khanacademy.org/favicon.ico' }
   ];
 
-  useEffect(() => {
-    // Apply settings on load
-    if (settings.tabCloaking) {
-      document.title = settings.customTitle;
-      const favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-      if (favicon) {
-        favicon.href = settings.customFavicon;
-      }
-    }
-  }, [settings.tabCloaking, settings.customTitle, settings.customFavicon]);
-
-  const handleSettingChange = (key: string, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+  const handleSettingChange = (key: keyof typeof settings, value: any) => {
+    updateSetting(key, value);
   };
 
   const applyPresetCloak = (preset: typeof presetCloaks[0]) => {
@@ -89,58 +71,31 @@ export const CloakingSettings: React.FC<CloakingSettingsProps> = ({ onClose }) =
     });
   };
 
-  const enableAboutBlank = () => {
-    const aboutBlankWindow = window.open('about:blank', '_blank');
-    if (aboutBlankWindow) {
-      aboutBlankWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>${settings.customTitle}</title>
-            <link rel="icon" href="${settings.customFavicon}">
-            <style>
-              body {
-                margin: 0;
-                padding: 0;
-                background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #a855f7 100%);
-                font-family: system-ui, -apple-system, sans-serif;
-                overflow: hidden;
-              }
-              iframe {
-                width: 100vw;
-                height: 100vh;
-                border: none;
-              }
-            </style>
-          </head>
-          <body>
-            <iframe src="${window.location.origin}" allow="fullscreen"></iframe>
-          </body>
-        </html>
-      `);
-      aboutBlankWindow.document.close();
-      
+  const handleAboutBlank = () => {
+    const success = enableAboutBlank();
+    if (success) {
       toast({
         title: "About:Blank Opened",
         description: "New cloaked window opened in about:blank",
       });
+    } else {
+      toast({
+        title: "Failed to Open",
+        description: "Please allow popups for this site",
+        variant: "destructive"
+      });
     }
   };
 
-  const exportSettings = () => {
-    const dataStr = JSON.stringify(settings, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'underground-facility-settings.json';
-    link.click();
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Settings Exported",
-      description: "Your settings have been downloaded",
-    });
+  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      importSettings(file);
+    }
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -239,7 +194,7 @@ export const CloakingSettings: React.FC<CloakingSettingsProps> = ({ onClose }) =
                     </p>
                   </div>
                   <Button
-                    onClick={enableAboutBlank}
+                    onClick={handleAboutBlank}
                     className="bg-gradient-to-r from-primary to-accent"
                   >
                     Open About:Blank
@@ -340,20 +295,23 @@ export const CloakingSettings: React.FC<CloakingSettingsProps> = ({ onClose }) =
                     <span>Theme Selection</span>
                   </Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {themes.map((theme) => (
+                    {themeOptions.map((themeOption) => (
                       <Card
-                        key={theme.id}
+                        key={themeOption.id}
                         className={`cursor-pointer transition-all duration-200 ${
-                          settings.theme === theme.id 
+                          theme === themeOption.id 
                             ? 'ring-2 ring-primary border-primary' 
                             : 'border-border hover:border-primary/50'
                         }`}
-                        onClick={() => handleSettingChange('theme', theme.id)}
+                        onClick={() => {
+                          changeTheme(themeOption.id as any);
+                          handleSettingChange('theme', themeOption.id);
+                        }}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-center space-x-3">
                             <div className="flex space-x-1">
-                              {theme.colors.map((color, index) => (
+                              {themeOption.colors.map((color, index) => (
                                 <div
                                   key={index}
                                   className="w-6 h-6 rounded-full"
@@ -362,8 +320,8 @@ export const CloakingSettings: React.FC<CloakingSettingsProps> = ({ onClose }) =
                               ))}
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium">{theme.name}</p>
-                              {settings.theme === theme.id && (
+                              <p className="font-medium">{themeOption.name}</p>
+                              {theme === themeOption.id && (
                                 <Badge className="mt-1">Current</Badge>
                               )}
                             </div>
@@ -384,9 +342,20 @@ export const CloakingSettings: React.FC<CloakingSettingsProps> = ({ onClose }) =
                     <Button onClick={exportSettings} variant="outline">
                       Export Settings
                     </Button>
-                    <Button variant="outline">
+                    <Button 
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
                       Import Settings
                     </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".json"
+                      onChange={handleImportFile}
+                      className="hidden"
+                    />
                   </div>
                 </div>
 

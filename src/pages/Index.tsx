@@ -1,33 +1,33 @@
 import ProxyInterface from '@/components/ProxyInterface';
+import { PasswordProtection } from '@/components/PasswordProtection';
+import { useSettings } from '@/hooks/useSettings';
+import { useTheme } from '@/hooks/useTheme';
 import { useEffect } from 'react';
 
 const Index = () => {
+  const { settings, isAuthenticated, authenticate } = useSettings();
+  const { theme } = useTheme();
+
   useEffect(() => {
-    // Set initial tab cloaking
-    document.title = 'Google';
-    
-    // Create or update favicon
-    let favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-    if (!favicon) {
-      favicon = document.createElement('link');
-      favicon.rel = 'icon';
-      document.head.appendChild(favicon);
-    }
-    favicon.href = 'https://www.google.com/favicon.ico';
-
-    // Set up panic key listener (Space key)
-    const handlePanicKey = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && e.ctrlKey && e.shiftKey) {
-        window.location.href = 'https://classroom.google.com';
+    // Apply initial settings on page load
+    if (settings.tabCloaking && settings.dynamicTitle) {
+      document.title = settings.customTitle;
+      
+      // Create or update favicon
+      let favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+      if (!favicon) {
+        favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        document.head.appendChild(favicon);
       }
-    };
+      favicon.href = settings.customFavicon;
+    }
+  }, [settings]);
 
-    document.addEventListener('keydown', handlePanicKey);
-    
-    return () => {
-      document.removeEventListener('keydown', handlePanicKey);
-    };
-  }, []);
+  // Show password protection if enabled and not authenticated
+  if (settings.passwordProtection && !isAuthenticated) {
+    return <PasswordProtection onAuthenticate={authenticate} />;
+  }
 
   return <ProxyInterface />;
 };
