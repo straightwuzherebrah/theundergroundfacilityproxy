@@ -42,6 +42,7 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const [currentProxy, setCurrentProxy] = useState<string>('');
   const [proxiedSrc, setProxiedSrc] = useState<string>('');
+  const [currentProxyName, setCurrentProxyName] = useState<string>('');
   // Read-mode fallback when iframe embedding is blocked by X-Frame-Options/CSP
   const [readMode, setReadMode] = useState(false);
   const [snapshotHtml, setSnapshotHtml] = useState<string | null>(null);
@@ -77,8 +78,9 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
       const next = getProxiedUrl(originalUrl);
       setProxiedSrc(next);
       try {
-        const host = new URL(next).hostname;
-        setCurrentProxy(host);
+        const meta = resolveProxyService(next);
+        setCurrentProxy(meta.host || new URL(next).hostname);
+        setCurrentProxyName(meta.name);
       } catch {}
     } else {
       setProxiedSrc('');
@@ -94,6 +96,16 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
+
+  // Watchdog: if a load takes too long, trigger fallback rotation/read mode
+  useEffect(() => {
+    if (!isLoading || readMode) return;
+    const id = window.setTimeout(() => {
+      console.log('Load timeout reached, attempting fallback...');
+      handleIframeError();
+    }, 8000);
+    return () => window.clearTimeout(id);
+  }, [isLoading, readMode, retryCount, currentUrl, currentProxyName]);
 
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -178,9 +190,10 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
     console.log(`Iframe error for ${currentUrl}, retry count: ${retryCount}`);
     
     // Mark current proxy as failed
-    if (currentProxy) {
-      proxyManager.markProxyAsFailed(currentProxy);
-      console.log(`Marked proxy ${currentProxy} as failed`);
+    const failedKey = currentProxyName || currentProxy;
+    if (failedKey) {
+      proxyManager.markProxyAsFailed(failedKey);
+      console.log(`Marked proxy ${failedKey} as failed`);
     }
     
     if (retryCount < 5 && currentUrl) {
@@ -263,7 +276,9 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
     // Use the advanced proxy manager
     const proxiedUrl = proxyManager.getNextProxy(targetUrl);
     if (proxiedUrl) {
-      setCurrentProxy(proxiedUrl.split('/')[2]); // Extract domain for display
+      const meta = resolveProxyService(proxiedUrl);
+      setCurrentProxy(meta.host || proxiedUrl.split('/')[2]); // Extract domain for display
+      setCurrentProxyName(meta.name);
       return proxiedUrl;
     }
     
@@ -305,6 +320,21 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
       return new URL(url).hostname;
     } catch {
       return url;
+    }
+  };
+
+  const resolveProxyService = (proxiedUrl: string): { name: string; host: string } => {
+    try {
+      const host = new URL(proxiedUrl).hostname;
+      if (host.includes('allorigins.win')) return { name: 'AllOrigins', host };
+      if (host.includes('cors-anywhere.herokuapp.com')) return { name: 'CORS Anywhere', host };
+      if (host.includes('corsproxy.io')) return { name: 'CORS Proxy', host };
+      if (host.includes('thingproxy.freeboard.io')) return { name: 'ThingProxy', host };
+      if (host.includes('proxy6.worker.js.org')) return { name: 'Proxy6', host };
+      if (host.includes('crossorigin.me')) return { name: 'CrossOrigin', host };
+      return { name: '', host };
+    } catch {
+      return { name: '', host: '' };
     }
   };
 
@@ -406,7 +436,7 @@ export const ProxyEngine: React.FC<ProxyEngineProps> = ({
               type="url"
               value={currentUrl}
               onChange={(e) => setCurrentUrl(e.target.value)}
-              onKeyPress={(e) => {
+              onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   navigateToUrl(currentUrl);
                 }
