@@ -3,18 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  RefreshCw, 
-  ArrowLeft, 
-  ArrowRight, 
-  Home, 
-  Lock, 
-  Globe,
-  AlertTriangle,
-  ExternalLink,
-  Maximize2,
-  Shield
-} from 'lucide-react';
+import { RefreshCw, ArrowLeft, ArrowRight, Chrome as Home, Lock, Globe, TriangleAlert as AlertTriangle, ExternalLink, Maximize2, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { proxyManager } from '@/lib/proxy-utils';
 

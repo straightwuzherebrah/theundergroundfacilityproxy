@@ -41,29 +41,29 @@ const ProxyInterface = () => {
   const [activeTabId, setActiveTabId] = useState('1');
 
   const quickLinks = [
-    { name: 'Google', url: 'https://google.com', icon: <Search className="h-4 w-4" />, category: 'search' },
-    { name: 'YouTube', url: 'https://youtube.com', icon: <Youtube className="h-4 w-4" />, category: 'media' },
-    { name: 'Discord', url: 'https://discord.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
-    { name: 'Netflix', url: 'https://netflix.com', icon: <Globe className="h-4 w-4" />, category: 'media' },
-    { name: 'Spotify', url: 'https://spotify.com', icon: <Globe className="h-4 w-4" />, category: 'media' },
-    { name: 'GitHub', url: 'https://github.com', icon: <Globe className="h-4 w-4" />, category: 'dev' },
-    { name: 'Reddit', url: 'https://reddit.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
-    { name: 'Instagram', url: 'https://instagram.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
-    { name: 'Twitter', url: 'https://twitter.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
-    { name: 'TikTok', url: 'https://tiktok.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
-    { name: 'Twitch', url: 'https://twitch.tv', icon: <Globe className="h-4 w-4" />, category: 'media' },
-    { name: 'Amazon', url: 'https://amazon.com', icon: <Globe className="h-4 w-4" />, category: 'shopping' },
+    { name: 'Google', url: 'google.com', icon: <Search className="h-4 w-4" />, category: 'search' },
+    { name: 'YouTube', url: 'youtube.com', icon: <Youtube className="h-4 w-4" />, category: 'media' },
+    { name: 'Discord', url: 'discord.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
+    { name: 'Netflix', url: 'netflix.com', icon: <Globe className="h-4 w-4" />, category: 'media' },
+    { name: 'Spotify', url: 'spotify.com', icon: <Globe className="h-4 w-4" />, category: 'media' },
+    { name: 'GitHub', url: 'github.com', icon: <Globe className="h-4 w-4" />, category: 'dev' },
+    { name: 'Reddit', url: 'reddit.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
+    { name: 'Instagram', url: 'instagram.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
+    { name: 'Twitter', url: 'twitter.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
+    { name: 'TikTok', url: 'tiktok.com', icon: <Globe className="h-4 w-4" />, category: 'social' },
+    { name: 'Twitch', url: 'twitch.tv', icon: <Globe className="h-4 w-4" />, category: 'media' },
+    { name: 'Amazon', url: 'amazon.com', icon: <Globe className="h-4 w-4" />, category: 'shopping' },
   ];
 
   const games = [
-    { name: 'Shell Shockers', url: 'https://shellshock.io', icon: <Gamepad2 className="h-4 w-4" /> },
-    { name: 'Krunker', url: 'https://krunker.io', icon: <Gamepad2 className="h-4 w-4" /> },
-    { name: '1v1.LOL', url: 'https://1v1.lol', icon: <Gamepad2 className="h-4 w-4" /> },
-    { name: 'Drift Hunters', url: 'https://drifthunters.io', icon: <Gamepad2 className="h-4 w-4" /> },
-    { name: 'Slope Game', url: 'https://slope-game.io', icon: <Gamepad2 className="h-4 w-4" /> },
-    { name: 'Agar.io', url: 'https://agar.io', icon: <Gamepad2 className="h-4 w-4" /> },
-    { name: 'Paper.io', url: 'https://paper-io.com', icon: <Gamepad2 className="h-4 w-4" /> },
-    { name: 'Bloons TD', url: 'https://bloons.com', icon: <Gamepad2 className="h-4 w-4" /> },
+    { name: 'Shell Shockers', url: 'shellshock.io', icon: <Gamepad2 className="h-4 w-4" /> },
+    { name: 'Krunker', url: 'krunker.io', icon: <Gamepad2 className="h-4 w-4" /> },
+    { name: '1v1.LOL', url: '1v1.lol', icon: <Gamepad2 className="h-4 w-4" /> },
+    { name: 'Drift Hunters', url: 'drifthunters.io', icon: <Gamepad2 className="h-4 w-4" /> },
+    { name: 'Slope Game', url: 'slope-game.io', icon: <Gamepad2 className="h-4 w-4" /> },
+    { name: 'Agar.io', url: 'agar.io', icon: <Gamepad2 className="h-4 w-4" /> },
+    { name: 'Paper.io', url: 'paper-io.com', icon: <Gamepad2 className="h-4 w-4" /> },
+    { name: 'Bloons TD', url: 'bloons.com', icon: <Gamepad2 className="h-4 w-4" /> },
   ];
 
   const handleNavigate = (targetUrl: string) => {
